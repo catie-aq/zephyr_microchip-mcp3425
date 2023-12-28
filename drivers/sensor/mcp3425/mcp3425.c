@@ -111,7 +111,7 @@ static int mcp3425_init(const struct device *dev) {
     // Send MCP3425 configuration
     buf[0] = MCP3425_DEFAULT_CONFIG;
     ret = i2c_write_dt(&cfg->bus, buf, 1);
-    LOG_INF("MCP3425 config: 0x%02X at addr 0x%02X", buf[0], (&cfg->bus)->addr);
+    LOG_INF("MCP3425 config: 0x%02X at addr 0x%02X (ret=%d)", buf[0], (&cfg->bus)->addr, ret);
 
     return ret;
 }
