@@ -17,6 +17,7 @@ LOG_MODULE_REGISTER(MCP3425, CONFIG_SENSOR_LOG_LEVEL);
 /* ================================= MCP3425 DATA & CONFIG ================================= */
 
 #define MCP3425_DEFAULT_CONFIG 0b00010100 // 14bits mode, continuous conversion mode
+#define MCP3425_VOLTAGE_DERIVATIVE 1.0029f // Calibrate with a multimeter, approximately.
 
 // required by sensor API: device's private data struct
 struct mcp3425_data {
@@ -63,8 +64,11 @@ static int mcp3425_sample_fetch(const struct device *dev, enum sensor_channel ch
     /* device's hot junction register is a signed int */
     data->voltage = (int32_t)(int16_t)(buf[0] << 8) | buf[1];
 
-    /* 0.0625C resolution per LSB */
-    data->voltage *= 62500;
+    // Apply bridge resistor.
+    // Apply voltage offset derivative.
+    // And divide by 4 because 14bits mode.
+    data->voltage = (int32_t)((float)(data->voltage) * (((91000.0f + 3000.0f) / 3000.0f) * MCP3425_VOLTAGE_DERIVATIVE)
+            / 4.0f);
 
     return 0;
 }
@@ -77,8 +81,8 @@ static int mcp3425_channel_get(const struct device *dev, enum sensor_channel cha
         return -ENOTSUP;
     }
 
-    val->val1 = data->voltage / 1000000;
-    val->val2 = data->voltage % 1000000;
+    val->val1 = data->voltage / 1000; // integer part
+    val->val2 = data->voltage % 1000; // fractional part
 
     return 0;
 }
