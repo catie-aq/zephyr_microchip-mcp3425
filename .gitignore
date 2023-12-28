@@ -1,0 +1,6 @@
+.build
+.idea/
+build/
+projectfiles
+*.py*
+*_bug

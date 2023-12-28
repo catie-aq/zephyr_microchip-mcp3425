@@ -6,14 +6,13 @@
 
 #define DT_DRV_COMPAT microchip_mcp3425
 
-//#include <zephyr/kernel.h>
+// #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(MCP3425, CONFIG_SENSOR_LOG_LEVEL);
-
 
 /* ================================= MCP3425 DATA & CONFIG ================================= */
 
@@ -31,12 +30,13 @@ struct mcp3425_config {
 
 /* =================================== PRIVATE FUNCTIONS =================================== */
 
-//static int mcp3425_reg_read(const struct device *dev, uint8_t start, uint8_t *buf, uint32_t size) {
-//    const struct mcp3425_config *cfg = dev->config;
+// static int mcp3425_reg_read(const struct device *dev, uint8_t start, uint8_t *buf, uint32_t size)
+// {
+//     const struct mcp3425_config *cfg = dev->config;
 //
-//    //!\ Careful with i2c burst functions, see warning in i2c API header. Could not work.
-//    return i2c_burst_read_dt(&cfg->bus, start, buf, size);
-//}
+//     //!\ Careful with i2c burst functions, see warning in i2c API header. Could not work.
+//     return i2c_burst_read_dt(&cfg->bus, start, buf, size);
+// }
 
 /* ================================= MCP3425 API FUNCTIONS ================================= */
 
@@ -47,7 +47,9 @@ static int mcp3425_sample_fetch(const struct device *dev, enum sensor_channel ch
     int ret;
 
     if (chan != SENSOR_CHAN_ALL && chan != SENSOR_CHAN_VOLTAGE) {
-        LOG_ERR("Unsupported sensor channel (0x%02X). MCP3425 is an ADC, so use \"SENSOR_CHAN_VOLTAGE\" only.", chan);
+        LOG_ERR("Unsupported sensor channel (0x%02X). MCP3425 is an ADC, so use "
+                "\"SENSOR_CHAN_VOLTAGE\" only.",
+                chan);
         return -ENOTSUP;
     }
 
@@ -59,7 +61,7 @@ static int mcp3425_sample_fetch(const struct device *dev, enum sensor_channel ch
     }
 
     /* device's hot junction register is a signed int */
-    data->voltage = (int32_t) (int16_t) (buf[0] << 8) | buf[1];
+    data->voltage = (int32_t)(int16_t)(buf[0] << 8) | buf[1];
 
     /* 0.0625C resolution per LSB */
     data->voltage *= 62500;
@@ -68,8 +70,7 @@ static int mcp3425_sample_fetch(const struct device *dev, enum sensor_channel ch
 }
 
 // channel get: return the last stored value of the sample fetch
-static int mcp3425_channel_get(const struct device *dev, enum sensor_channel chan,
-                               struct sensor_value *val) {
+static int mcp3425_channel_get(const struct device *dev, enum sensor_channel chan, struct sensor_value *val) {
     struct mcp3425_data *data = dev->data;
 
     if (chan != SENSOR_CHAN_VOLTAGE) {
@@ -82,10 +83,11 @@ static int mcp3425_channel_get(const struct device *dev, enum sensor_channel cha
     return 0;
 }
 
-// required by sensor API: driver specific API functions (see "sensor_driver_api" struct in sensor.h)
+// required by sensor API: driver specific API functions (see "sensor_driver_api" struct in
+// sensor.h)
 static const struct sensor_driver_api mcp3425_api = {
-        .sample_fetch = mcp3425_sample_fetch,
-        .channel_get = mcp3425_channel_get,
+    .sample_fetch = mcp3425_sample_fetch,
+    .channel_get = mcp3425_channel_get,
 };
 
 /* =============================== MCP3425 INIT & DT DRIVER DEF ================================ */
@@ -111,15 +113,20 @@ static int mcp3425_init(const struct device *dev) {
 }
 
 // required by driver API: specific DT define process for MCP3425 sensor
-#define MCP3425_DEFINE(id)                                                                  \
-    static struct mcp3425_data mcp3425_data_##id;                                           \
-                                                                                            \
-    static const struct mcp3425_config mcp3425_config_##id = {                              \
-        .bus = I2C_DT_SPEC_INST_GET(id),                                                    \
-    };                                                                                      \
-                                                                                            \
-    SENSOR_DEVICE_DT_INST_DEFINE(id, mcp3425_init, NULL, &mcp3425_data_##id,                \
-                     &mcp3425_config_##id, POST_KERNEL,                                     \
-                     CONFIG_SENSOR_INIT_PRIORITY, &mcp3425_api);
+#define MCP3425_DEFINE(id)                                                                                             \
+    static struct mcp3425_data mcp3425_data_##id;                                                                      \
+                                                                                                                       \
+    static const struct mcp3425_config mcp3425_config_##id = {                                                         \
+        .bus = I2C_DT_SPEC_INST_GET(id),                                                                               \
+    };                                                                                                                 \
+                                                                                                                       \
+    SENSOR_DEVICE_DT_INST_DEFINE(id,                                                                                   \
+            mcp3425_init,                                                                                              \
+            NULL,                                                                                                      \
+            &mcp3425_data_##id,                                                                                        \
+            &mcp3425_config_##id,                                                                                      \
+            POST_KERNEL,                                                                                               \
+            CONFIG_SENSOR_INIT_PRIORITY,                                                                               \
+            &mcp3425_api);
 
 DT_INST_FOREACH_STATUS_OKAY(MCP3425_DEFINE)
