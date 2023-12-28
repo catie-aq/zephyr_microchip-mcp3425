@@ -1,0 +1,10 @@
+# Copyright (c) CATIE 2023
+# SPDX-License-Identifier: Apache-2.0
+
+config MCP3425
+	bool "MCP3425 i2c 16 bits single channel ADC"
+	default y
+	depends on DT_HAS_MICROCHIP_MCP3425_ENABLED
+	select I2C
+	help
+	  Enable driver for MCP3425 i2c 16 bits single channel ADC.
