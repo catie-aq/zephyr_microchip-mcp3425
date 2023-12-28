@@ -1,7 +1,7 @@
 /*
  * Copyright (c) CATIE 2023
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * Overlay pour la zest core L4A6 couplé à une zest halfbridge.
  */
 
@@ -10,9 +10,14 @@
     pinctrl-0 = <&i2c4_scl_pc0 &i2c4_sda_pc1>;
     pinctrl-names = "default";
 
-    mcp3425@d2 {
+    mcp3425_zest_halfbridge: mcp3425@d2 {
         compatible = "microchip,mcp3425";
-        label = "MCP3425";
         reg = <0xd2>;
     };
 };
+
+/// {
+//    aliases {
+//        mcp3425_zest_halfbridge = &mcp3425;
+//    };
+//};
