@@ -10,9 +10,9 @@
     pinctrl-0 = <&i2c4_scl_pc0 &i2c4_sda_pc1>;
     pinctrl-names = "default";
 
-    mcp3425_zest_halfbridge: mcp3425@d2 {
+    mcp3425_zest_halfbridge: mcp3425@69 {
         compatible = "microchip,mcp3425";
-        reg = <0xd2>;
+        reg = <0x69>;
     };
 };
 

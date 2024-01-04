@@ -45,7 +45,7 @@ int main(void) {
         printf("Device MCP3425 not found.\n");
         return 0;
     }
-    k_msleep(5000); // too soon to check if device ready ?
+
     if (!device_is_ready(mcp3425_sensor)) {
         printf("Device %s is not ready.\n", mcp3425_sensor->name);
         return 0;

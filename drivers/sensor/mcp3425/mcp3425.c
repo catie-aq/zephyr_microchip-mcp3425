@@ -98,20 +98,25 @@ static const struct sensor_driver_api mcp3425_api = {
 
 // required by sensor API: driver init function
 static int mcp3425_init(const struct device *dev) {
+
     const struct mcp3425_config *cfg = dev->config;
     uint8_t buf[1];
     int ret;
 
     // check if bus is ready
     if (!i2c_is_ready_dt(&cfg->bus)) {
-        LOG_ERR("MCP3425 i2c bus %s not ready", cfg->bus.bus->name);
+        LOG_ERR("i2c bus %s not ready", cfg->bus.bus->name);
         return -ENODEV;
     }
 
     // Send MCP3425 configuration
     buf[0] = MCP3425_DEFAULT_CONFIG;
     ret = i2c_write_dt(&cfg->bus, buf, 1);
-    LOG_INF("MCP3425 config: 0x%02X at addr 0x%02X (ret=%d)", buf[0], (&cfg->bus)->addr, ret);
+    LOG_DBG("config: 0x%02X at addr 0x%02X (ret=%d)", buf[0], (&cfg->bus)->addr, ret);
+
+    if (ret < 0) {
+        LOG_ERR("Init fail (i2c ret=%d)", ret);
+    }
 
     return ret;
 }
