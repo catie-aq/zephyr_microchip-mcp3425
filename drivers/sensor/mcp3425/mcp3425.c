@@ -14,14 +14,18 @@
 
 LOG_MODULE_REGISTER(MCP3425, CONFIG_SENSOR_LOG_LEVEL);
 
-/* ================================= MCP3425 DATA & CONFIG ================================= */
+/* ================================= MCP3425 DATA & CONFIG (could be in a .h) ============== */
 
 #define MCP3425_DEFAULT_CONFIG 0b00010100 // 14bits mode, continuous conversion mode
 #define MCP3425_VOLTAGE_DERIVATIVE 1.0029f // Calibrate with a multimeter, approximately.
+#define MCP3425_LSB_16BITS 625
+#define MCP3425_LSB_14BITS 2500
+#define MCP3425_LSB_12BITS 10000
+#define MCP3425_VOLTAGE_DECIMAL 10000000
 
 // required by sensor API: device's private data struct
 struct mcp3425_data {
-    int32_t voltage;
+    int32_t voltage_uv; // in 10^(-7) volts or [uV]x0.1 !
 };
 
 // required by sensor API: device's instance configuration struct
@@ -44,6 +48,7 @@ struct mcp3425_config {
 // sample fetch: get latest value through i2c
 static int mcp3425_sample_fetch(const struct device *dev, enum sensor_channel chan) {
     struct mcp3425_data *data = dev->data;
+    static int16_t voltage_raw;
     uint8_t buf[2];
     int ret;
 
@@ -61,14 +66,11 @@ static int mcp3425_sample_fetch(const struct device *dev, enum sensor_channel ch
         return ret;
     }
 
-    /* device's hot junction register is a signed int */
-    data->voltage = (int32_t)(int16_t)(buf[0] << 8) | buf[1];
+    /* build raw voltage */
+    voltage_raw = (int16_t)((buf[0] << 8) | buf[1]);
 
-    // Apply bridge resistor.
-    // Apply voltage offset derivative.
-    // And divide by 4 because 14bits mode.
-    data->voltage = (int32_t)((float)(data->voltage) * (((91000.0f + 3000.0f) / 3000.0f) * MCP3425_VOLTAGE_DERIVATIVE)
-            / 4.0f);
+    /* compute true voltage */
+    data->voltage_uv = voltage_raw * MCP3425_LSB_14BITS;
 
     return 0;
 }
@@ -81,8 +83,8 @@ static int mcp3425_channel_get(const struct device *dev, enum sensor_channel cha
         return -ENOTSUP;
     }
 
-    val->val1 = data->voltage / 1000; // integer part
-    val->val2 = data->voltage % 1000; // fractional part
+    val->val1 = data->voltage_uv / MCP3425_VOLTAGE_DECIMAL; // integer part
+    val->val2 = (data->voltage_uv % MCP3425_VOLTAGE_DECIMAL) / 10; // fractional part, must be 10^(-6) and not 10^(-7) !
 
     return 0;
 }
