@@ -10,7 +10,7 @@
 #include <zephyr/logging/log.h>
 
 /* 1000 msec = 1 sec */
-#define SLEEP_TIME_MS 1000
+#define SLEEP_TIME_MS 500
 
 /* The devicetree node identifier for the "led0" alias. */
 #define LED0_NODE DT_ALIAS(led0)
@@ -77,8 +77,8 @@ int main(void) {
             break;
         }
 
-        LOG_INF("ADC value: %2.2fV", sensor_value_to_float(&mcp3425_value));
-        //        LOG_INF("ADC value: %d.%dV", (&mcp3425_value)->val1, (&mcp3425_value)->val2);
+        //        LOG_INF("ADC value: %2.3fV", sensor_value_to_float(&mcp3425_value));
+        LOG_INF("ADC value: %d.%dV", (&mcp3425_value)->val1, (&mcp3425_value)->val2);
 
         // k_sleep(K_SECONDS(2));
         k_msleep(SLEEP_TIME_MS);
