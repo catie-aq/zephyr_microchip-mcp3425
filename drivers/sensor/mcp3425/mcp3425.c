@@ -31,6 +31,7 @@ struct mcp3425_data {
 // required by sensor API: device's instance configuration struct
 struct mcp3425_config {
     const struct i2c_dt_spec bus;
+    int32_t adc_resolution;
 };
 
 /* =================================== PRIVATE FUNCTIONS =================================== */
@@ -111,6 +112,20 @@ static int mcp3425_init(const struct device *dev) {
         return -ENODEV;
     }
 
+    switch (cfg->adc_resolution) {
+        case 16:
+            LOG_INF("16 bits mode");
+            break;
+        case 12:
+            LOG_INF("12 bits mode");
+            break;
+        default:
+            LOG_WRN("resolution not recognized (%d bits), going to default mode.", cfg->adc_resolution);
+        case 14:
+            LOG_INF("14 bits mode (default)");
+            break;
+    }
+
     // Send MCP3425 configuration
     buf[0] = MCP3425_DEFAULT_CONFIG;
     ret = i2c_write_dt(&cfg->bus, buf, 1);
@@ -129,6 +144,7 @@ static int mcp3425_init(const struct device *dev) {
                                                                                                                        \
     static const struct mcp3425_config mcp3425_config_##id = {                                                         \
         .bus = I2C_DT_SPEC_INST_GET(id),                                                                               \
+        .adc_resolution = CONFIG_MCP3425_RESOLUTION,                                                                   \
     };                                                                                                                 \
                                                                                                                        \
     SENSOR_DEVICE_DT_INST_DEFINE(id,                                                                                   \

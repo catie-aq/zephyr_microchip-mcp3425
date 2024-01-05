@@ -8,3 +8,10 @@ config MCP3425
 	select I2C
 	help
 	  Enable driver for MCP3425 i2c 16 bits single channel ADC.
+
+config MCP3425_RESOLUTION
+	int "MCP3425 resolution"
+	default 14
+	depends on DT_HAS_MICROCHIP_MCP3425_ENABLED
+	help
+	  Set the ADC resolution in bits. Correct values are 12, 14 (default) or 16.
