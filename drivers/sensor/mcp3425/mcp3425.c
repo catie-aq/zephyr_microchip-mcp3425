@@ -160,7 +160,7 @@ static int mcp3425_init(const struct device *dev) {
             return -EINVAL;
     }
 
-    LOG_INF("PGA gain=%d, max input voltage is %dmV.",
+    LOG_DBG("PGA gain=%d, max input voltage is %dmV.",
             cfg->adc_pga_gain,
             MCP3425_VOLTAGE_REFERENCE / cfg->adc_pga_gain);
 
