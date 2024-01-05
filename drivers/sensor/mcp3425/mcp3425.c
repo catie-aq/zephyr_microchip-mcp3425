@@ -140,23 +140,24 @@ static int mcp3425_init(const struct device *dev) {
     // setup resolution and lsb
     uint8_t mcp3425_i2c_config_resolution_bits;
     switch (cfg->adc_resolution) {
-        case 16:
-            LOG_DBG("16 bits mode.");
-            data->adc_value_lsb = MCP3425_LSB_16BITS;
-            mcp3425_i2c_config_resolution_bits = MCP3425_CONF_16BITS;
-            break;
         case 12:
             LOG_DBG("12 bits mode.");
             data->adc_value_lsb = MCP3425_LSB_12BITS;
             mcp3425_i2c_config_resolution_bits = MCP3425_CONF_12BITS;
             break;
-        default: // should never happen with current yaml binding configuration, thanks to the enum.
-            LOG_WRN("resolution not recognized (%d bits), going to default mode (14bits).", cfg->adc_resolution);
         case 14:
             LOG_DBG("14 bits mode (default).");
             data->adc_value_lsb = MCP3425_LSB_14BITS;
             mcp3425_i2c_config_resolution_bits = MCP3425_CONF_14BITS;
             break;
+        case 16:
+            LOG_DBG("16 bits mode.");
+            data->adc_value_lsb = MCP3425_LSB_16BITS;
+            mcp3425_i2c_config_resolution_bits = MCP3425_CONF_16BITS;
+            break;
+        default:
+            LOG_ERR("Unrecognized resolution, this case can't happened. Check binding.");
+            return -EINVAL;
     }
 
     LOG_INF("PGA gain=%d, max input voltage is %dmV.",
