@@ -119,7 +119,7 @@ static int mcp3425_init(const struct device *dev) {
         case 12:
             LOG_INF("12 bits mode");
             break;
-        default:
+        default: // should never happen with current yaml binding configuration, thanks to the enum.
             LOG_WRN("resolution not recognized (%d bits), going to default mode.", cfg->adc_resolution);
         case 14:
             LOG_INF("14 bits mode (default)");
@@ -133,6 +133,7 @@ static int mcp3425_init(const struct device *dev) {
 
     if (ret < 0) {
         LOG_ERR("Init fail (i2c ret=%d)", ret);
+        LOG_ERR("Is the device correctly connected, power up, and config with the correct address ?");
     }
 
     return ret;
@@ -144,7 +145,7 @@ static int mcp3425_init(const struct device *dev) {
                                                                                                                        \
     static const struct mcp3425_config mcp3425_config_##id = {                                                         \
         .bus = I2C_DT_SPEC_INST_GET(id),                                                                               \
-        .adc_resolution = CONFIG_MCP3425_RESOLUTION,                                                                   \
+        .adc_resolution = DT_PROP(DT_DRV_INST(id), resolution),                                                        \
     };                                                                                                                 \
                                                                                                                        \
     SENSOR_DEVICE_DT_INST_DEFINE(id,                                                                                   \

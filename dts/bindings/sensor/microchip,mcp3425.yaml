@@ -8,3 +8,14 @@ description: |
 compatible: "microchip,mcp3425"
 
 include: [sensor-device.yaml, i2c-device.yaml]
+
+properties:
+  resolution:
+    required: false
+    type: int
+    default: 14
+    description: Set the ADC resolution in bits. Correct values are 12, 14 (default) or 16.
+    enum:
+      - 12
+      - 14
+      - 16

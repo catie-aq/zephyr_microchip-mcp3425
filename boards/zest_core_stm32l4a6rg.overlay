@@ -13,6 +13,7 @@
     mcp3425_zest_halfbridge: mcp3425@69 {
         compatible = "microchip,mcp3425";
         reg = <0x69>;
+        resolution = <16>; //not required, default is 14
     };
 };
 
