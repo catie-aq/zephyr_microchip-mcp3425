@@ -19,6 +19,8 @@ LOG_MODULE_REGISTER(MCP3425, CONFIG_SENSOR_LOG_LEVEL);
 #define MCP3425_DEFAULT_CONFIG 0b00010100 // 14bits mode, continuous conversion mode
 #define MCP3425_VOLTAGE_DERIVATIVE 1.0029f // Calibrate with a multimeter, approximately.
 
+#define MCP3425_VOLTAGE_REFERENCE 2048 // in mV
+
 #define MCP3425_LSB_12BITS 10000
 #define MCP3425_LSB_14BITS 2500
 #define MCP3425_LSB_16BITS 625
@@ -27,10 +29,10 @@ LOG_MODULE_REGISTER(MCP3425, CONFIG_SENSOR_LOG_LEVEL);
 #define MCP3425_CONF_14BITS 0b01 // 60 SPS
 #define MCP3425_CONF_16BITS 0b10 // 15 SPS
 
-#define MCP3425_CONF_PGA_1 0b00
-#define MCP3425_CONF_PGA_2 0b01
-#define MCP3425_CONF_PGA_4 0b10
-#define MCP3425_CONF_PGA_8 0b11
+#define MCP3425_CONF_PGA_1 0b00 // 1 V/V Gain
+#define MCP3425_CONF_PGA_2 0b01 // 2 V/V Gain
+#define MCP3425_CONF_PGA_4 0b10 // 4 V/V Gain
+#define MCP3425_CONF_PGA_8 0b11 // 8 V/V Gain
 
 #define MCP3425_CONF_CONV_ONE_SHOT 0b0
 #define MCP3425_CONF_CONV_CONTINUOUS 0b1
@@ -50,21 +52,9 @@ struct mcp3425_data {
 // required by sensor API: device's instance configuration struct
 struct mcp3425_config {
     const struct i2c_dt_spec bus;
-    const int32_t adc_resolution;
+    const int32_t adc_resolution; // in bits. See binding for more infos.
+    const int32_t adc_pga_gain; // in xV/V. See binding for more infos.
 };
-
-// int32_t get_mcp3425_lsb(int resolution){
-//     switch (resolution) {
-//         case 16:
-//             return MCP3425_LSB_16BITS;
-//         case 14:
-//             return MCP3425_LSB_14BITS;
-//         case 12:
-//             return MCP3425_LSB_12BITS;
-//         default:
-//             return MCP3425_LSB_DEFAULT;
-//     }
-// }
 
 /* =================================== PRIVATE FUNCTIONS =================================== */
 
@@ -96,6 +86,7 @@ static int mcp3425_sample_fetch(const struct device *dev, enum sensor_channel ch
     const struct mcp3425_config *cfg = dev->config;
     ret = i2c_read_dt(&cfg->bus, buf, 2);
     if (ret < 0) {
+        LOG_ERR("Can't access driver %s anymore. No power ?", dev->name);
         return ret;
     }
 
@@ -103,7 +94,7 @@ static int mcp3425_sample_fetch(const struct device *dev, enum sensor_channel ch
     voltage_raw = (int16_t)((buf[0] << 8) | buf[1]);
 
     /* compute true voltage */
-    data->voltage_uv = voltage_raw * data->adc_value_lsb;
+    data->voltage_uv = voltage_raw * data->adc_value_lsb / cfg->adc_pga_gain;
 
     return 0;
 }
@@ -147,35 +138,40 @@ static int mcp3425_init(const struct device *dev) {
     }
 
     // setup resolution and lsb
-    uint8_t mcp3425_i2c_config_resolution_bits = 0x00;
+    uint8_t mcp3425_i2c_config_resolution_bits;
     switch (cfg->adc_resolution) {
         case 16:
-            LOG_INF("16 bits mode");
+            LOG_DBG("16 bits mode.");
             data->adc_value_lsb = MCP3425_LSB_16BITS;
             mcp3425_i2c_config_resolution_bits = MCP3425_CONF_16BITS;
             break;
         case 12:
-            LOG_INF("12 bits mode");
+            LOG_DBG("12 bits mode.");
             data->adc_value_lsb = MCP3425_LSB_12BITS;
             mcp3425_i2c_config_resolution_bits = MCP3425_CONF_12BITS;
             break;
         default: // should never happen with current yaml binding configuration, thanks to the enum.
-            LOG_WRN("resolution not recognized (%d bits), going to default mode.", cfg->adc_resolution);
+            LOG_WRN("resolution not recognized (%d bits), going to default mode (14bits).", cfg->adc_resolution);
         case 14:
-            LOG_INF("14 bits mode (default)");
+            LOG_DBG("14 bits mode (default).");
             data->adc_value_lsb = MCP3425_LSB_14BITS;
             mcp3425_i2c_config_resolution_bits = MCP3425_CONF_14BITS;
             break;
     }
 
+    LOG_INF("PGA gain=%d, max input voltage is %dmV.",
+            cfg->adc_pga_gain,
+            MCP3425_VOLTAGE_REFERENCE / cfg->adc_pga_gain);
+
     // Send MCP3425 configuration
     mcp3425_config_register[0] = 0x00 | (MCP3425_CONF_CONV_CONTINUOUS << MCP3425_SHIFT_CONV)
-            | (mcp3425_i2c_config_resolution_bits << MCP3425_SHIFT_RESOL) | (MCP3425_CONF_PGA_1 << MCP3425_SHIFT_PGA);
+            | (mcp3425_i2c_config_resolution_bits << MCP3425_SHIFT_RESOL)
+            | ((cfg->adc_pga_gain >> 1) << MCP3425_SHIFT_PGA);
     ret = i2c_write_dt(&cfg->bus, mcp3425_config_register, 1);
-    LOG_INF("config: 0x%02X at addr 0x%02X (ret=%d)", mcp3425_config_register[0], (&cfg->bus)->addr, ret);
+    LOG_INF("Sent config 0x%02X to %s (ret=%d)", mcp3425_config_register[0], dev->name, ret);
 
     if (ret < 0) {
-        LOG_ERR("Init fail (i2c ret=%d)", ret);
+        LOG_ERR("Init fail (i2c ret=%d) !", ret);
         LOG_ERR("Is the device correctly connected, power up, and config with the correct address ?");
     }
 
@@ -189,6 +185,7 @@ static int mcp3425_init(const struct device *dev) {
     static const struct mcp3425_config mcp3425_config_##id = {                                                         \
         .bus = I2C_DT_SPEC_INST_GET(id),                                                                               \
         .adc_resolution = DT_PROP(DT_DRV_INST(id), resolution),                                                        \
+        .adc_pga_gain = DT_PROP(DT_DRV_INST(id), pga_gain),                                                            \
     };                                                                                                                 \
                                                                                                                        \
     SENSOR_DEVICE_DT_INST_DEFINE(id,                                                                                   \

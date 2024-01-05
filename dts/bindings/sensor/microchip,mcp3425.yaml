@@ -7,7 +7,7 @@ description: |
 
 compatible: "microchip,mcp3425"
 
-include: [sensor-device.yaml, i2c-device.yaml]
+include: [ sensor-device.yaml, i2c-device.yaml ]
 
 properties:
   resolution:
@@ -19,3 +19,13 @@ properties:
       - 12
       - 14
       - 16
+  pga_gain:
+    required: false
+    type: int
+    default: 1
+    description: Set the PGA Gain before the analog conversion. This is useful to convert a smaller input signal with high resolution. Correct values are 1 (default), 2, 4 or 8.
+    enum:
+      - 1
+      - 2
+      - 4
+      - 8
