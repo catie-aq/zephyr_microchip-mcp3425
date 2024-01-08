@@ -29,3 +29,7 @@ properties:
       - 2
       - 4
       - 8
+  one_shot_mode:
+    required: false
+    type: boolean
+    description: By default, ADC scan input continuously. If one shot is defined in device overlay, scan input enter one shot mode, i.e. scan only when asked (energy saving).

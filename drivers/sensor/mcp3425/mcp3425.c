@@ -54,6 +54,7 @@ struct mcp3425_config {
     const struct i2c_dt_spec bus;
     const int32_t adc_resolution; // in bits. See binding for more infos.
     const int32_t adc_pga_gain; // in xV/V. See binding for more infos.
+    const int one_shot_mode;
 };
 
 /* =================================== PRIVATE FUNCTIONS =================================== */
@@ -164,15 +165,26 @@ static int mcp3425_init(const struct device *dev) {
             cfg->adc_pga_gain,
             MCP3425_VOLTAGE_REFERENCE / cfg->adc_pga_gain);
 
+    // setup conversion mode
+    uint8_t mcp3425_i2c_config_conversion_mode;
+    if (cfg->one_shot_mode) {
+        LOG_INF("Conversion mode is one-shot");
+        mcp3425_i2c_config_conversion_mode = MCP3425_CONF_CONV_ONE_SHOT;
+        LOG_WRN("Be aware, one shot mode is not completely supported.");
+    } else {
+        LOG_INF("Conversion mode is continous");
+        mcp3425_i2c_config_conversion_mode = MCP3425_CONF_CONV_CONTINUOUS;
+    }
+
     // Send MCP3425 configuration
-    mcp3425_config_register[0] = 0x00 | (MCP3425_CONF_CONV_CONTINUOUS << MCP3425_SHIFT_CONV)
+    mcp3425_config_register[0] = 0x00 | (mcp3425_i2c_config_conversion_mode << MCP3425_SHIFT_CONV)
             | (mcp3425_i2c_config_resolution_bits << MCP3425_SHIFT_RESOL)
             | ((cfg->adc_pga_gain >> 1) << MCP3425_SHIFT_PGA);
     ret = i2c_write_dt(&cfg->bus, mcp3425_config_register, 1);
-    LOG_INF("Sent config 0x%02X to %s (ret=%d)", mcp3425_config_register[0], dev->name, ret);
+    LOG_DBG("Sent config 0x%02X to %s (ret=%d)", mcp3425_config_register[0], dev->name, ret);
 
     if (ret < 0) {
-        LOG_ERR("Init fail (i2c ret=%d) !", ret);
+        LOG_ERR("Init fail for %s (i2c ret=%d) !", dev->name, ret);
         LOG_ERR("Is the device correctly connected, power up, and config with the correct address ?");
     }
 
@@ -187,6 +199,7 @@ static int mcp3425_init(const struct device *dev) {
         .bus = I2C_DT_SPEC_INST_GET(id),                                                                               \
         .adc_resolution = DT_PROP(DT_DRV_INST(id), resolution),                                                        \
         .adc_pga_gain = DT_PROP(DT_DRV_INST(id), pga_gain),                                                            \
+        .one_shot_mode = DT_PROP(DT_DRV_INST(id), one_shot_mode),                                                      \
     };                                                                                                                 \
                                                                                                                        \
     SENSOR_DEVICE_DT_INST_DEFINE(id,                                                                                   \
