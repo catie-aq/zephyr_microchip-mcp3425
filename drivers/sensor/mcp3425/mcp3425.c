@@ -19,7 +19,7 @@ LOG_MODULE_REGISTER(MCP3425, CONFIG_SENSOR_LOG_LEVEL);
 #define MCP3425_DEFAULT_CONFIG 0b00010100 // 14bits mode, continuous conversion mode
 #define MCP3425_VOLTAGE_DERIVATIVE 1.0029f // Calibrate with a multimeter, approximately.
 
-#define MCP3425_VOLTAGE_REFERENCE 2048 // in mV
+#define MCP3425_INTERNAL_VOLTAGE_REFERENCE 2048 // in mV
 
 #define MCP3425_LSB_12BITS 10000
 #define MCP3425_LSB_14BITS 2500
@@ -40,11 +40,14 @@ LOG_MODULE_REGISTER(MCP3425, CONFIG_SENSOR_LOG_LEVEL);
 #define MCP3425_SHIFT_PGA 0 // PGA Gain
 #define MCP3425_SHIFT_RESOL 2 // Sample Rate / resolution
 #define MCP3425_SHIFT_CONV 4 // Conversion mode
+#define MCP3425_SHIFT_RDY_BIT 7 // ready bit
+#define MCP3425_MASK_RDY_BIT 0x8 // ready bit
 
 #define MCP3425_VOLTAGE_DECIMAL 10000000 // 10^(7)
 
 // required by sensor API: device's private data struct
 struct mcp3425_data {
+    uint8_t config_register;
     int32_t adc_value_lsb;
     int32_t voltage_uv; // in 10^(-7) volts or [uV]x0.1 !
 };
@@ -73,7 +76,7 @@ struct mcp3425_config {
 static int mcp3425_sample_fetch(const struct device *dev, enum sensor_channel chan) {
     struct mcp3425_data *data = dev->data;
     static int16_t voltage_raw;
-    uint8_t buf[2];
+    uint8_t buf[3];
     int ret;
 
     if (chan != SENSOR_CHAN_ALL && chan != SENSOR_CHAN_VOLTAGE) {
@@ -85,11 +88,13 @@ static int mcp3425_sample_fetch(const struct device *dev, enum sensor_channel ch
 
     /* read signed 16 bit double-buffered register value */
     const struct mcp3425_config *cfg = dev->config;
-    ret = i2c_read_dt(&cfg->bus, buf, 2);
+    ret = i2c_read_dt(&cfg->bus, buf, 3);
     if (ret < 0) {
         LOG_ERR("Can't access driver %s anymore. No power ?", dev->name);
         return ret;
     }
+
+    LOG_INF("rdy bit: %d", ((buf[2] >> MCP3425_SHIFT_RDY_BIT) & 0x1u));
 
     /* build raw voltage. In 12 and 14-bits modes, MSB is repeated by the ADC for direct int16 support. */
     voltage_raw = (int16_t)((buf[0] << 8) | buf[1]);
@@ -129,7 +134,6 @@ static int mcp3425_init(const struct device *dev) {
 
     const struct mcp3425_config *cfg = dev->config;
     struct mcp3425_data *data = dev->data;
-    uint8_t mcp3425_config_register[1];
     int ret;
 
     // check if bus is ready
@@ -163,7 +167,7 @@ static int mcp3425_init(const struct device *dev) {
 
     LOG_DBG("PGA gain=%d, max input voltage is %dmV.",
             cfg->adc_pga_gain,
-            MCP3425_VOLTAGE_REFERENCE / cfg->adc_pga_gain);
+            MCP3425_INTERNAL_VOLTAGE_REFERENCE / cfg->adc_pga_gain);
 
     // setup conversion mode
     uint8_t mcp3425_i2c_config_conversion_mode;
@@ -177,11 +181,11 @@ static int mcp3425_init(const struct device *dev) {
     }
 
     // Send MCP3425 configuration
-    mcp3425_config_register[0] = 0x00 | (mcp3425_i2c_config_conversion_mode << MCP3425_SHIFT_CONV)
+    data->config_register = 0x00 | (mcp3425_i2c_config_conversion_mode << MCP3425_SHIFT_CONV)
             | (mcp3425_i2c_config_resolution_bits << MCP3425_SHIFT_RESOL)
             | ((cfg->adc_pga_gain >> 1) << MCP3425_SHIFT_PGA);
-    ret = i2c_write_dt(&cfg->bus, mcp3425_config_register, 1);
-    LOG_DBG("Sent config 0x%02X to %s (ret=%d)", mcp3425_config_register[0], dev->name, ret);
+    ret = i2c_write_dt(&cfg->bus, &data->config_register, 1);
+    LOG_DBG("Sent config 0x%02X to %s (ret=%d)", data->config_register, dev->name, ret);
 
     if (ret < 0) {
         LOG_ERR("Init fail for %s (i2c ret=%d) !", dev->name, ret);
@@ -192,21 +196,21 @@ static int mcp3425_init(const struct device *dev) {
 }
 
 // required by driver API: specific DT define process for each MCP3425 sensor instance
-#define MCP3425_DEFINE(id)                                                                                             \
-    static struct mcp3425_data mcp3425_data_##id;                                                                      \
+#define MCP3425_DEFINE(inst)                                                                                           \
+    static struct mcp3425_data mcp3425_data_##inst;                                                                    \
                                                                                                                        \
-    static const struct mcp3425_config mcp3425_config_##id = {                                                         \
-        .bus = I2C_DT_SPEC_INST_GET(id),                                                                               \
-        .adc_resolution = DT_PROP(DT_DRV_INST(id), resolution),                                                        \
-        .adc_pga_gain = DT_PROP(DT_DRV_INST(id), pga_gain),                                                            \
-        .one_shot_mode = DT_PROP(DT_DRV_INST(id), one_shot_mode),                                                      \
+    static const struct mcp3425_config mcp3425_config_##inst = {                                                       \
+        .bus = I2C_DT_SPEC_INST_GET(inst),                                                                             \
+        .adc_resolution = DT_INST_PROP(inst, resolution),                                                              \
+        .adc_pga_gain = DT_INST_PROP(inst, pga_gain),                                                                  \
+        .one_shot_mode = DT_INST_PROP(inst, one_shot_mode),                                                            \
     };                                                                                                                 \
                                                                                                                        \
-    SENSOR_DEVICE_DT_INST_DEFINE(id,                                                                                   \
+    SENSOR_DEVICE_DT_INST_DEFINE(inst,                                                                                 \
             mcp3425_init,                                                                                              \
             NULL,                                                                                                      \
-            &mcp3425_data_##id,                                                                                        \
-            &mcp3425_config_##id,                                                                                      \
+            &mcp3425_data_##inst,                                                                                      \
+            &mcp3425_config_##inst,                                                                                    \
             POST_KERNEL,                                                                                               \
             CONFIG_SENSOR_INIT_PRIORITY,                                                                               \
             &mcp3425_api);
