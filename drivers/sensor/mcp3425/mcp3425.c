@@ -91,7 +91,7 @@ static int mcp3425_sample_fetch(const struct device *dev, enum sensor_channel ch
         return ret;
     }
 
-    /* build raw voltage */
+    /* build raw voltage. In 12 and 14-bits modes, MSB is repeated by the ADC for direct int16 support. */
     voltage_raw = (int16_t)((buf[0] << 8) | buf[1]);
 
     /* compute true voltage */
