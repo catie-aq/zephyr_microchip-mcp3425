@@ -41,13 +41,14 @@ LOG_MODULE_REGISTER(MCP3425, CONFIG_SENSOR_LOG_LEVEL);
 #define MCP3425_SHIFT_RESOL 2 // Sample Rate / resolution
 #define MCP3425_SHIFT_CONV 4 // Conversion mode
 #define MCP3425_SHIFT_RDY_BIT 7 // ready bit
-#define MCP3425_MASK_RDY_BIT 0x8 // ready bit
+#define MCP3425_MASK_RDY_BIT 0x80 // ready bit mask
 
 #define MCP3425_VOLTAGE_DECIMAL 10000000 // 10^(7)
+#define MCP3425_DATA_VALID_MAX_RETRY 500
 
 // required by sensor API: device's private data struct
 struct mcp3425_data {
-    uint8_t config_register;
+    uint8_t config_register; //? should be in mcp3425_config ? not sure
     int32_t adc_value_lsb;
     int32_t voltage_uv; // in 10^(-7) volts or [uV]x0.1 !
 };
@@ -75,7 +76,9 @@ struct mcp3425_config {
 // sample fetch: get latest value through i2c
 static int mcp3425_sample_fetch(const struct device *dev, enum sensor_channel chan) {
     struct mcp3425_data *data = dev->data;
+    const struct mcp3425_config *cfg = dev->config;
     static int16_t voltage_raw;
+    static uint8_t data_is_not_ready;
     uint8_t buf[3];
     int ret;
 
@@ -86,15 +89,42 @@ static int mcp3425_sample_fetch(const struct device *dev, enum sensor_channel ch
         return -ENOTSUP;
     }
 
-    /* read signed 16 bit double-buffered register value */
-    const struct mcp3425_config *cfg = dev->config;
-    ret = i2c_read_dt(&cfg->bus, buf, 3);
-    if (ret < 0) {
-        LOG_ERR("Can't access driver %s anymore. No power ?", dev->name);
-        return ret;
+    // if in one shot mode, need to send config to trig a conversion
+    if (cfg->one_shot_mode) {
+        static uint8_t one_shot_command;
+        one_shot_command = ((data->config_register) | MCP3425_MASK_RDY_BIT); // writing RDY to wake up conversion
+        ret = i2c_write_dt(&cfg->bus, &one_shot_command, 1);
+        if (ret < 0) {
+            LOG_ERR("one shot fail for %s (i2c ret=%d) !", dev->name, ret);
+            return ret;
+        }
     }
 
-    LOG_INF("rdy bit: %d", ((buf[2] >> MCP3425_SHIFT_RDY_BIT) & 0x1u));
+    data_is_not_ready = 1;
+    unsigned int max_retry = MCP3425_DATA_VALID_MAX_RETRY;
+
+    while (data_is_not_ready && max_retry) {
+
+        /* read signed 16 bit double-buffered register value */
+        ret = i2c_read_dt(&cfg->bus, buf, 3);
+        if (ret < 0) {
+            LOG_ERR("Can't access driver %s anymore. No power ?", dev->name);
+            return ret;
+        }
+
+        data_is_not_ready = ((buf[2] >> MCP3425_SHIFT_RDY_BIT) & 0x01);
+
+        // Todo: Maybe it could be better to wait instead of spamming the i2c.
+        // depending of the chosen ADC resolution, the time conversion is known.
+        max_retry--;
+        if (!max_retry) {
+            LOG_WRN("After %d retry, data is still not ready for %s !", MCP3425_DATA_VALID_MAX_RETRY, dev->name);
+        }
+    }
+
+    if (cfg->one_shot_mode) {
+        LOG_DBG("One shot mode: get correct value after %d retry", MCP3425_DATA_VALID_MAX_RETRY - max_retry);
+    }
 
     /* build raw voltage. In 12 and 14-bits modes, MSB is repeated by the ADC for direct int16 support. */
     voltage_raw = (int16_t)((buf[0] << 8) | buf[1]);
@@ -120,8 +150,7 @@ static int mcp3425_channel_get(const struct device *dev, enum sensor_channel cha
     return 0;
 }
 
-// required by sensor API: driver specific API functions (see "sensor_driver_api" struct in
-// sensor.h)
+// required by sensor API: driver specific API functions (see "sensor_driver_api" struct in sensor.h)
 static const struct sensor_driver_api mcp3425_api = {
     .sample_fetch = mcp3425_sample_fetch,
     .channel_get = mcp3425_channel_get,
@@ -169,14 +198,15 @@ static int mcp3425_init(const struct device *dev) {
             cfg->adc_pga_gain,
             MCP3425_INTERNAL_VOLTAGE_REFERENCE / cfg->adc_pga_gain);
 
+    // todo: improve this part?
     // setup conversion mode
     uint8_t mcp3425_i2c_config_conversion_mode;
     if (cfg->one_shot_mode) {
-        LOG_INF("Conversion mode is one-shot");
+        LOG_WRN("Conversion mode for %s is one-shot.", dev->name);
+        LOG_WRN("Sample fetch may take more time (current max data retry is %d).", MCP3425_DATA_VALID_MAX_RETRY);
         mcp3425_i2c_config_conversion_mode = MCP3425_CONF_CONV_ONE_SHOT;
-        LOG_WRN("Be aware, one shot mode is not completely supported.");
     } else {
-        LOG_INF("Conversion mode is continous");
+        LOG_INF("Conversion mode for %s is continuous", dev->name);
         mcp3425_i2c_config_conversion_mode = MCP3425_CONF_CONV_CONTINUOUS;
     }
 
