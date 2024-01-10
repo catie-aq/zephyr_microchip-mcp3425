@@ -194,9 +194,11 @@ static int mcp3425_init(const struct device *dev) {
             return -EINVAL;
     }
 
-    LOG_DBG("PGA gain=%d, max input voltage is %dmV.",
+    LOG_DBG("PGA gain=%d, max input voltage is %dmV, lsb is %d.%duV.",
             cfg->adc_pga_gain,
-            MCP3425_INTERNAL_VOLTAGE_REFERENCE / cfg->adc_pga_gain);
+            MCP3425_INTERNAL_VOLTAGE_REFERENCE / cfg->adc_pga_gain,
+            (data->adc_value_lsb / cfg->adc_pga_gain) / 10,
+            (data->adc_value_lsb / cfg->adc_pga_gain) % 10);
 
     // todo: improve this part?
     // setup conversion mode

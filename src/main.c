@@ -80,8 +80,7 @@ int main(void) {
         //        LOG_INF("ADC value: %2.3fV", sensor_value_to_float(&mcp3425_value));
         LOG_INF("ADC value: %d.%dV", (&mcp3425_value)->val1, (&mcp3425_value)->val2);
 
-        // k_sleep(K_SECONDS(2));
-        k_msleep(SLEEP_TIME_MS);
+        k_sleep(K_SECONDS(5));
     }
     return 0;
 }

@@ -13,9 +13,9 @@
     mcp3425_zest_halfbridge: mcp3425@69 {
         compatible = "microchip,mcp3425";
         reg = <0x69>;
-        resolution = <16>; //not required, default is 14
-        pga_gain = <1>; //not required, default is 1 (no pga gain, full resolution at Vref)
-        one_shot_mode;
+        resolution = <16>; // not required, default is 14
+        pga_gain = <1>; // not required, default is 1 (no pga gain, full resolution at Vref)
+        //one_shot_mode;
     };
 };
 
