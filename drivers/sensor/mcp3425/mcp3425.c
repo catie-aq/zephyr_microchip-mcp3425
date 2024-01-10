@@ -204,11 +204,11 @@ static int mcp3425_init(const struct device *dev) {
     // setup conversion mode
     uint8_t mcp3425_i2c_config_conversion_mode;
     if (cfg->one_shot_mode) {
-        LOG_WRN("Conversion mode for %s is one-shot.", dev->name);
-        LOG_WRN("Sample fetch may take more time (current max data retry is %d).", MCP3425_DATA_VALID_MAX_RETRY);
+        LOG_DBG("Conversion mode for %s is one-shot.", dev->name);
+        LOG_DBG("Sample fetch may take more time (current max data retry is %d).", MCP3425_DATA_VALID_MAX_RETRY);
         mcp3425_i2c_config_conversion_mode = MCP3425_CONF_CONV_ONE_SHOT;
     } else {
-        LOG_INF("Conversion mode for %s is continuous", dev->name);
+        LOG_DBG("Conversion mode for %s is continuous", dev->name);
         mcp3425_i2c_config_conversion_mode = MCP3425_CONF_CONV_CONTINUOUS;
     }
 
