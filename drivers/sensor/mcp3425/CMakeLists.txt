@@ -3,4 +3,3 @@
 
 zephyr_library()
 zephyr_library_sources(mcp3425.c)
-#zephyr_include_directories(.)

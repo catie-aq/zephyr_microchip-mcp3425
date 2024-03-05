@@ -52,11 +52,6 @@ int main(void)
 		return 0;
 	}
 
-	LOG_DBG("test log dbg");     // level 4 + zephyr kernel dbg
-	LOG_INF("test log info");    // level 3
-	LOG_WRN("test log warning"); // level 2
-	LOG_ERR("test log error");   // level 1
-
 	while (1) {
 
 		// toggle GPIO
@@ -78,7 +73,6 @@ int main(void)
 			break;
 		}
 
-		//        LOG_INF("ADC value: %2.3fV", sensor_value_to_float(&mcp3425_value));
 		LOG_INF("ADC value: %d.%dV", (&mcp3425_value)->val1, (&mcp3425_value)->val2);
 
 		k_sleep(K_SECONDS(5));
