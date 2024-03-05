@@ -1,0 +1,21 @@
+/*
+ * Copyright (c) CATIE 2023
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Overlay to use with the Zest_Actuator_HalfBridges board.
+ * The MCP3425 will be available from the sixtron i2c bus.
+ */
+
+&sixtron_i2c {
+    status = "okay";
+    //pinctrl-0 = <&i2c4_scl_pc0 &i2c4_sda_pc1>;
+    //pinctrl-names = "default";
+
+    mcp3425_zest_halfbridge: mcp3425@69 {
+        compatible = "microchip,mcp3425";
+        reg = <0x69>;
+        resolution = <16>; // not required, default is 14.
+        pga_gain = <1>; // not required, default is 1 (no pga gain, full resolution at Vref).
+        //one_shot_mode; // uncomment if you want to use one shot mode instead of continuous mode.
+    };
+};
