@@ -3,6 +3,6 @@
 
 if SENSOR
 
-rsource "mcp3425/Kconfig"
+rsource "microchip/Kconfig"
 
 endif # SENSOR
