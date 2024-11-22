@@ -1,0 +1,8 @@
+sample:
+  name: MCP3425 ADC sensor sample
+tests:
+  sample.default:
+    tags: adc
+    integration_platforms:
+      - zest_core_stm32l4a6rg
+    depends_on: i2c
