@@ -1,7 +1,7 @@
 # Copyright (c) CATIE 2023
 # SPDX-License-Identifier: Apache-2.0
 
-if SENSOR
+if ADC
 
 rsource "microchip/Kconfig"
 
