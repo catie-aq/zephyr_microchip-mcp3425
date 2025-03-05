@@ -3,6 +3,6 @@
 
 menu "Drivers"
 
-rsource "sensor/Kconfig"
+rsource "adc/Kconfig"
 
 endmenu

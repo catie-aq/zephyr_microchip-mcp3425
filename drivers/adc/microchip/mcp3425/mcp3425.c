@@ -12,7 +12,7 @@
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(MCP3425, CONFIG_SENSOR_LOG_LEVEL);
+LOG_MODULE_REGISTER(MCP3425, CONFIG_ADC_LOG_LEVEL);
 
 /* ================================= MCP3425 DATA & CONFIG (could be in a .h) ============== */
 
@@ -251,6 +251,6 @@ static int mcp3425_init(const struct device *dev)
                                                                                                    \
 	SENSOR_DEVICE_DT_INST_DEFINE(inst, mcp3425_init, NULL, &mcp3425_data_##inst,               \
 				     &mcp3425_config_##inst, POST_KERNEL,                          \
-				     CONFIG_SENSOR_INIT_PRIORITY, &mcp3425_api);
+				     CONFIG_ADC_INIT_PRIORITY, &mcp3425_api);
 
 DT_INST_FOREACH_STATUS_OKAY(MCP3425_DEFINE)
