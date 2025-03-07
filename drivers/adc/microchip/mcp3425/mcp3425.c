@@ -11,44 +11,9 @@
 #include <zephyr/drivers/adc.h>
 #include <zephyr/logging/log.h>
 
+#include "mcp3425.h"
+
 LOG_MODULE_REGISTER(MCP3425, CONFIG_ADC_LOG_LEVEL);
-
-/* ================================= MCP3425 DATA & CONFIG (could be in a .h) ============== */
-
-#define MCP3425_DEFAULT_CONFIG     0b00010100 // 14bits mode, continuous conversion mode
-#define MCP3425_VOLTAGE_DERIVATIVE 1.0029f    // Calibrate with a multimeter, approximately.
-
-#define MCP3425_MAX_CHANNEL 1
-#define MCP3425_INTERNAL_VOLTAGE_REFERENCE 2048 // in mV
-
-#define MCP3425_CONF_12BITS 0b00 /* 240 SPS */
-#define MCP3425_CONF_14BITS 0b01 /* 60 SPS */
-#define MCP3425_CONF_16BITS 0b10 /* 15 SPS */
-
-#define MCP3425_CONF_CONV_ONE_SHOT   0b0
-#define MCP3425_CONF_CONV_CONTINUOUS 0b1
-
-#define MCP3425_SHIFT_PGA     0    /* PGA Gain */
-#define MCP3425_SHIFT_RESOL   2    /* Sample Rate / resolution */
-#define MCP3425_SHIFT_CONV    4    /* Conversion mode */
-#define MCP3425_SHIFT_RDY_BIT 7    /* ready bit */
-#define MCP3425_MASK_RDY_BIT  0x80 /* ready bit mask */
-
-#define MCP3425_DATA_VALID_MAX_RETRY 500
-
-/* required by sensor API: device's private data struct */
-struct mcp3425_data {
-	uint8_t config_register;
-	uint16_t *buffer;
-};
-
-/* required by sensor API: device's instance configuration struct */
-struct mcp3425_config {
-	const struct i2c_dt_spec bus;
-	const int32_t pga_gain;   /* in xV/V. See binding for more infos */
-	const int32_t resolution; /* in bits. See binding for more infos */
-	const int one_shot_mode;
-};
 
 static int mcp3425_configuration(const struct device *dev)
 {
@@ -82,7 +47,7 @@ static int mcp3425_configuration(const struct device *dev)
 	/* todo: improve this part?
 	 * setup conversion mode
 	 */
-	 uint8_t mcp3425_i2c_config_conversion_mode;
+	uint8_t mcp3425_i2c_config_conversion_mode;
 	if (cfg->one_shot_mode) {
 		LOG_DBG("Conversion mode for %s is one-shot.", dev->name);
 		LOG_DBG("Sample fetch may take more time (current max data retry is %d).",
@@ -109,7 +74,8 @@ static int mcp3425_configuration(const struct device *dev)
 	return 0;
 }
 
-static int mcp3425_channel_setup(const struct device *dev, const struct adc_channel_cfg *channel_cfg)
+static int mcp3425_channel_setup(const struct device *dev,
+				 const struct adc_channel_cfg *channel_cfg)
 {
 	if (channel_cfg->channel_id > MCP3425_MAX_CHANNEL) {
 		LOG_ERR("unsupported channel id '%d'", channel_cfg->channel_id);
@@ -121,15 +87,15 @@ static int mcp3425_channel_setup(const struct device *dev, const struct adc_chan
 		return -ENOTSUP;
 	}
 
-	switch(channel_cfg->gain) {
-		case ADC_GAIN_1:
-		case ADC_GAIN_2:
-		case ADC_GAIN_4:
-		case ADC_GAIN_8:
-			break;
-		default:
-			LOG_ERR("unsupported channel gain '%d'", channel_cfg->gain);
-			return -ENOTSUP;
+	switch (channel_cfg->gain) {
+	case ADC_GAIN_1:
+	case ADC_GAIN_2:
+	case ADC_GAIN_4:
+	case ADC_GAIN_8:
+		break;
+	default:
+		LOG_ERR("unsupported channel gain '%d'", channel_cfg->gain);
+		return -ENOTSUP;
 	}
 
 	if (channel_cfg->acquisition_time != ADC_ACQ_TIME_DEFAULT) {
@@ -191,6 +157,7 @@ static int mcp3425_read(const struct device *dev, const struct adc_sequence *seq
 
 	/* build raw voltage. In 12 and 14-bits modes, MSB is repeated by the ADC for direct int16
 	 * support.
+	 * full value is divided by 2 because the resolution is halved -> no negative signed value
 	 */
 	voltage_raw = (int16_t)((buf[0] << 8) | buf[1]) >> 1;
 	*data->buffer++ = voltage_raw;
@@ -225,12 +192,14 @@ static int mcp3425_init(const struct device *dev)
 	static struct mcp3425_data mcp3425_data_##inst;                                            \
 	static const struct mcp3425_config mcp3425_config_##inst = {                               \
 		.bus = I2C_DT_SPEC_INST_GET(inst),                                                 \
-		.pga_gain = DT_STRING_TOKEN(ADC_CHANNEL_DT_NODE(DT_DRV_INST(inst), 1), zephyr_gain), \
-		.resolution = DT_PROP_OR(ADC_CHANNEL_DT_NODE(DT_DRV_INST(inst), 1), zephyr_resolution, 0), \
+		.pga_gain =                                                                        \
+			DT_STRING_TOKEN(ADC_CHANNEL_DT_NODE(DT_DRV_INST(inst), 1), zephyr_gain),   \
+		.resolution = DT_PROP_OR(ADC_CHANNEL_DT_NODE(DT_DRV_INST(inst), 1),                \
+					 zephyr_resolution, 0),                                    \
 		.one_shot_mode = DT_INST_PROP(inst, one_shot_mode),                                \
 	};                                                                                         \
-	DEVICE_DT_INST_DEFINE(inst, mcp3425_init, NULL, &mcp3425_data_##inst,               \
-				     &mcp3425_config_##inst, POST_KERNEL,                          \
-				     CONFIG_ADC_INIT_PRIORITY, &mcp3425_driver_api);
+	DEVICE_DT_INST_DEFINE(inst, mcp3425_init, NULL, &mcp3425_data_##inst,                      \
+			      &mcp3425_config_##inst, POST_KERNEL, CONFIG_ADC_INIT_PRIORITY,       \
+			      &mcp3425_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(MCP3425_DEFINE)
