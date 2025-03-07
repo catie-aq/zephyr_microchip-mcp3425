@@ -26,7 +26,8 @@ LOG_MODULE_REGISTER(Main);
  */
 static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 static const struct adc_dt_spec adc_channel = ADC_DT_SPEC_GET_BY_NAME(DT_PATH(zephyr_user), a0);
-static const struct voltage_divider_dt_spec voltage_spec = VOLTAGE_DIVIDER_DT_SPEC_GET(DT_NODELABEL(voltage));
+static const struct voltage_divider_dt_spec voltage_spec =
+	VOLTAGE_DIVIDER_DT_SPEC_GET(DT_NODELABEL(voltage));
 
 int main(void)
 {
@@ -74,14 +75,15 @@ int main(void)
 
 		(void)adc_sequence_init_dt(&adc_channel, &sequence);
 		ret = adc_read_dt(&adc_channel, &sequence);
-		
+
 		if (ret != 0) {
 			printf("sensor_channel_get error: %d\n", ret);
 			break;
 		}
 		val_mv = (int32_t)buf;
 		LOG_INF("RAW value: %d", val_mv);
-		LOG_INF("CUSTOM value: %d", (val_mv * adc_ref_internal(adc_channel.dev)) >> adc_channel.resolution);
+		LOG_INF("CUSTOM value: %d",
+			(val_mv * adc_ref_internal(adc_channel.dev)) >> adc_channel.resolution);
 
 		ret = adc_raw_to_millivolts_dt(&adc_channel, &val_mv);
 		if (ret < 0) {
