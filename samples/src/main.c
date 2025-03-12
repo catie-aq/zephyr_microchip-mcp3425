@@ -15,8 +15,6 @@
 /* The devicetree node identifier for the "mcp3425_zest_halfbridge" label */
 #define MCP3425_NODE DT_NODELABEL(mcp34250)
 
-LOG_MODULE_REGISTER(Main);
-
 /*
  * A build error on this line means your board is unsupported.
  * See the sample documentation for information on how to fix this.
@@ -45,12 +43,12 @@ int main(void)
 	if (ret != 0) {
 		printf("sensor_sample_fetch error: %d\n", ret);
 	}
-	LOG_INF("ADC ref internal: %d", adc_ref_internal(adc_channel.dev));
-	LOG_INF("ADC gain: %d", adc_channel.channel_cfg.gain);
-	LOG_INF("ADC resolution: %d", adc_channel.resolution);
-	int test = 1000;
+	printk("ADC ref internal: %d\n", adc_ref_internal(adc_channel.dev));
+	printk("ADC gain: %d\n", adc_channel.channel_cfg.gain);
+	printk("ADC resolution: %d\n", adc_channel.resolution);
+	int test = 1000; /* 1000mV */
 	adc_gain_invert(adc_channel.channel_cfg.gain, &test);
-	LOG_INF("ADC invertGain: %d", test);
+	printk("ADC invertGain: %d\n", test);
 
 	while (1) {
 		(void)adc_sequence_init_dt(&adc_channel, &sequence);
@@ -61,17 +59,15 @@ int main(void)
 			break;
 		}
 		val_mv = (int32_t)buf;
-		LOG_INF("RAW value: %d", val_mv);
-		LOG_INF("CUSTOM value: %d",
-			(val_mv * adc_ref_internal(adc_channel.dev)) >> adc_channel.resolution);
+		printk("RAW value: %d\n", val_mv);
 
 		ret = adc_raw_to_millivolts_dt(&adc_channel, &val_mv);
 		if (ret < 0) {
-			LOG_ERR("Raw to millivolts conversion error: %d", ret);
+			printf("Raw to millivolts conversion error: %d\n", ret);
 		} else {
-			LOG_INF("ADC value: %d mV", val_mv);
+			printk("ADC value: %d mV\n", val_mv);
 			voltage_divider_scale_dt(&voltage_spec, &val_mv);
-			LOG_INF("FULL value: %d mV", val_mv);
+			printk("FULL value: %d mV\n", val_mv);
 		}
 
 		k_sleep(K_SECONDS(5));
