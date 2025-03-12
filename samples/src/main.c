@@ -19,7 +19,8 @@
  * A build error on this line means your board is unsupported.
  * See the sample documentation for information on how to fix this.
  */
-static const struct adc_dt_spec adc_channel = ADC_DT_SPEC_GET_BY_NAME(DT_PATH(zephyr_user), a0);
+static const struct adc_dt_spec adc_channel =
+	ADC_DT_SPEC_GET_BY_NAME(DT_PATH(zephyr_user), mcp3425_vin);
 static const struct voltage_divider_dt_spec voltage_spec =
 	VOLTAGE_DIVIDER_DT_SPEC_GET(DT_NODELABEL(voltage));
 
