@@ -11,7 +11,7 @@
 &sixtron_i2c {
     status = "okay";
 
-    mcp34250: mcp3425@69 {
+    mcp3425: mcp3425@69 {
         compatible = "microchip,mcp3425";
         status = "okay";
         reg = <0x69>;
@@ -34,13 +34,13 @@
 
 / {
     zephyr,user {
-        io-channels = <&mcp34250 1>;
+        io-channels = <&mcp3425 1>;
         io-channel-names = "A0";
     };
 
     voltage: voltage_divider {
         compatible = "voltage-divider";
-        io-channels = <&mcp34250 1>;
+        io-channels = <&mcp3425 1>;
         full-ohms = <(3000 + 91000)>;
         output-ohms = <3000>;
     };
