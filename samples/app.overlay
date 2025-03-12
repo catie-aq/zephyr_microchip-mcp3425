@@ -35,7 +35,7 @@
 / {
     zephyr,user {
         io-channels = <&mcp3425 1>;
-        io-channel-names = "A0";
+        io-channel-names = "MCP3425_VIN";
     };
 
     voltage: voltage_divider {
