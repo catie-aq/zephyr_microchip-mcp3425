@@ -12,9 +12,6 @@
 /* 1000 msec = 1 sec */
 #define SLEEP_TIME_MS 2000
 
-/* The devicetree node identifier for the "led0" alias. */
-#define LED0_NODE DT_ALIAS(led0)
-
 /* The devicetree node identifier for the "mcp3425_zest_halfbridge" label */
 #define MCP3425_NODE DT_NODELABEL(mcp34250)
 
@@ -24,7 +21,6 @@ LOG_MODULE_REGISTER(Main);
  * A build error on this line means your board is unsupported.
  * See the sample documentation for information on how to fix this.
  */
-static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 static const struct adc_dt_spec adc_channel = ADC_DT_SPEC_GET_BY_NAME(DT_PATH(zephyr_user), a0);
 static const struct voltage_divider_dt_spec voltage_spec =
 	VOLTAGE_DIVIDER_DT_SPEC_GET(DT_NODELABEL(voltage));
@@ -39,15 +35,6 @@ int main(void)
 		/* buffer size in bytes, not number of samples */
 		.buffer_size = sizeof(buf),
 	};
-
-	// GPIO led
-	if (!gpio_is_ready_dt(&led)) {
-		return 0;
-	}
-	ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);
-	if (ret < 0) {
-		return 0;
-	}
 
 	if (!adc_is_ready_dt(&adc_channel)) {
 		printf("Device %s is not ready.\n", adc_channel.dev->name);
@@ -66,13 +53,6 @@ int main(void)
 	LOG_INF("ADC invertGain: %d", test);
 
 	while (1) {
-
-		// toggle GPIO
-		ret = gpio_pin_toggle_dt(&led);
-		if (ret < 0) {
-			return 0;
-		}
-
 		(void)adc_sequence_init_dt(&adc_channel, &sequence);
 		ret = adc_read_dt(&adc_channel, &sequence);
 
