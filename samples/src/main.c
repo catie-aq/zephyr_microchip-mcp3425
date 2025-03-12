@@ -12,8 +12,8 @@
 /* 1000 msec = 1 sec */
 #define SLEEP_TIME_MS 2000
 
-/* The devicetree node identifier for the "mcp3425_zest_halfbridge" label */
-#define MCP3425_NODE DT_NODELABEL(mcp34250)
+/* The devicetree node identifier for the "mcp3425" label */
+#define MCP3425_NODE DT_NODELABEL(mcp3425)
 
 /*
  * A build error on this line means your board is unsupported.
