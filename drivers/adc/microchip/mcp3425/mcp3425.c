@@ -165,7 +165,7 @@ static int mcp3425_read(const struct device *dev, const struct adc_sequence *seq
 	return 0;
 }
 
-static const struct adc_driver_api mcp3425_driver_api = {
+static DEVICE_API(adc, mcp3425_driver_api) = {
 	.channel_setup = mcp3425_channel_setup,
 	.read = mcp3425_read,
 	.ref_internal = MCP3425_INTERNAL_VOLTAGE_REFERENCE,
